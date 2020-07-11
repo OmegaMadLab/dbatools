@@ -1,15 +1,13 @@
 
 -- SQL Server 2016 SP2 Diagnostic Information Queries
 -- Glenn Berry 
--- Last Modified: December 10, 2019
--- https://www.sqlskills.com/blogs/glenn/
--- http://sqlserverperformance.wordpress.com/
+-- Last Modified: June 25, 2020
+-- https://glennsqlperformance.com/
+-- https://sqlserverperformance.wordpress.com/
 -- Twitter: GlennAlanBerry
 
 -- Please listen to my Pluralsight courses
 -- https://www.pluralsight.com/author/glenn-berry
-
--- If you want to find all of our SQLskills SQL101 blog posts, check out https://bit.ly/2qLwfXW
 
 
 -- Please make sure you are using the correct version of these diagnostic queries for your version of SQL Server
@@ -23,11 +21,9 @@
 
 
 --******************************************************************************
---*   Copyright (C) 2019 Glenn Berry, SQLskills.com
+--*   Copyright (C) 2020 Glenn Berry
 --*   All rights reserved. 
 --*
---*   For more scripts and sample code, check out 
---*      https://www.sqlskills.com/blogs/glenn
 --*
 --*   You may alter this code for your own *non-commercial* purposes. You may
 --*   republish altered code as long as you include this copyright and give due credit. 
@@ -76,8 +72,10 @@ SELECT @@SERVERNAME AS [Server Name], @@VERSION AS [SQL Server and OS Version In
 -- 13.0.5426.0		SP2 CU8						7/31/2019		https://support.microsoft.com/en-us/help/4505830/cumulative-update-8-for-sql-server-2016-sp2 
 -- 13.0.5470.0		SP2 CU9						9/30/2019		https://support.microsoft.com/en-us/help/4515435/cumulative-update-9-for-sql-server-2016-sp2 
 -- 13.0.5492.2		SP2 CU10				    10/8/2019		https://support.microsoft.com/en-us/help/4524334/cumulative-update-10-for-sql-server-2016-sp2
--- 13.0.5598.27		SP2 CU11					12/9/2019		https://support.microsoft.com/en-us/help/4527378/cumulative-update-11-for-sql-server-2016-sp2		
-
+-- 13.0.5598.27		SP2 CU11					12/9/2019		https://support.microsoft.com/en-us/help/4527378/cumulative-update-11-for-sql-server-2016-sp2
+-- 13.0.5622.0		SP2 CU11 + Security Update	2/11/2010		https://support.microsoft.com/en-us/help/4535706/description-of-the-security-update-for-sql-server-2016-sp2-cu11-februa
+-- 13.0.5698.0		SP2 CU12					2/25/2020		https://support.microsoft.com/en-us/help/4536648/cumulative-update-12-for-sql-server-2016-sp2
+-- 13.0.5820.21		SP2 CU13					5/38/2020		https://support.microsoft.com/en-us/help/4549825/cumulative-update-13-for-sql-server-2016-sp2
 		
 															
 
@@ -198,7 +196,7 @@ DBCC TRACESTATUS (-1);
 --           https://bit.ly/2sboMli  (added in SP2 CU6)
 
 -- TF 3226 - Supresses logging of successful database backup messages to the SQL Server Error Log
---           https://bit.ly/2p6MTjS  
+--           https://bit.ly/38zDNAK   
 
 -- TF 6534 - Enables use of native code to improve performance with spatial data
 --           https://bit.ly/2HrQUpU         
@@ -307,6 +305,10 @@ ORDER BY sj.name OPTION (RECOMPILE);
 -- SQL Server Maintenance Solution
 -- https://bit.ly/1pgchQu  
 
+-- You can use this script to add default schedules to the standard Ola Hallengren Maintenance Solution jobs
+-- https://bit.ly/3ane0gN
+
+
 
 -- Get SQL Server Agent Alert Information (Query 10) (SQL Server Agent Alerts)
 SELECT name, event_source, message_id, severity, [enabled], has_notification, 
@@ -317,7 +319,7 @@ ORDER BY name OPTION (RECOMPILE);
 
 -- Gives you some basic information about your SQL Server Agent Alerts 
 -- (which are different from SQL Server Agent jobs)
--- Read more about Agent Alerts here: https://bit.ly/2Giz0Xf 
+-- Read more about Agent Alerts here: https://bit.ly/2v5YR37 
 
 
 
@@ -370,15 +372,16 @@ WHERE node_state_desc <> N'ONLINE DAC' OPTION (RECOMPILE);
 -- sys.dm_os_nodes (Transact-SQL)
 -- https://bit.ly/2pn5Mw8
 
--- Balancing Your Available SQL Server Core Licenses Evenly Across NUMA Nodes
--- https://bit.ly/2vfC4Rq
+-- How to Balance SQL Server Core Licenses Across NUMA Nodes
+-- https://bit.ly/3i4TyVR
 
 
 
 -- Good basic information about OS memory amounts and state  (Query 13) (System Memory)
 SELECT total_physical_memory_kb/1024 AS [Physical Memory (MB)], 
        available_physical_memory_kb/1024 AS [Available Memory (MB)], 
-       total_page_file_kb/1024 AS [Total Page File (MB)], 
+       total_page_file_kb/1024 AS [Page File Commit Limit (MB)],
+	   total_page_file_kb/1024 - total_physical_memory_kb/1024 AS [Physical Page File Size (MB)],
 	   available_page_file_kb/1024 AS [Available Page File (MB)], 
 	   system_cache_kb/1024 AS [System Cache (MB)],
        system_memory_state_desc AS [System Memory State]
@@ -984,7 +987,7 @@ OPTION (RECOMPILE);
 
 -- Cumulative wait stats are not as useful on an idle instance that is not under load or performance pressure
 
--- SQL Server Wait Types Library (Paul Randal)
+-- SQL Server Wait Types Library 
 -- https://bit.ly/2ePzYO2
 
 -- The SQL Server Wait Type Repository
@@ -1036,7 +1039,7 @@ WHERE scheduler_id < 255 OPTION (RECOMPILE);
 -- High Avg Pending DiskIO Counts are a sign of disk pressure
 
 -- How to Do Some Very Basic SQL Server Monitoring
--- https://bit.ly/2q3Btgt
+-- https://bit.ly/30IRla0
 
 
 
@@ -1270,7 +1273,10 @@ ORDER BY total_worker_time DESC OPTION (RECOMPILE);
 SELECT f.name AS [File Name] , f.physical_name AS [Physical Name], 
 CAST((f.size/128.0) AS DECIMAL(15,2)) AS [Total Size in MB],
 CAST(f.size/128.0 - CAST(FILEPROPERTY(f.name, 'SpaceUsed') AS int)/128.0 AS DECIMAL(15,2)) 
-AS [Available Space In MB], f.[file_id], fg.name AS [Filegroup Name],
+AS [Available Space In MB],
+CAST((f.size/128.0) AS DECIMAL(15,2)) - 
+CAST(f.size/128.0 - CAST(FILEPROPERTY(f.name, 'SpaceUsed') AS int)/128.0 AS DECIMAL(15,2)) AS [Used Space in MB],
+f.[file_id], fg.name AS [Filegroup Name],
 f.is_percent_growth, f.growth, fg.is_default, fg.is_read_only, 
 fg.is_autogrow_all_files
 FROM sys.database_files AS f WITH (NOLOCK) 
@@ -1607,7 +1613,7 @@ ORDER BY cp.usecounts DESC OPTION (RECOMPILE);
 
 -- Breaks down buffers used by current database by object (table, index) in the buffer cache  (Query 67) (Buffer Usage)
 -- Note: This query could take some time on a busy instance
-SELECT SCHEMA_NAME(o.Schema_ID) AS [Schema Name],
+SELECT fg.name AS [Filegroup Name], SCHEMA_NAME(o.Schema_ID) AS [Schema Name],
 OBJECT_NAME(p.[object_id]) AS [Object Name], p.index_id, 
 CAST(COUNT(*)/128.0 AS DECIMAL(10, 2)) AS [Buffer size(MB)],  
 COUNT(*) AS [BufferCount], p.[Rows] AS [Row Count],
@@ -1619,12 +1625,17 @@ INNER JOIN sys.partitions AS p WITH (NOLOCK)
 ON a.container_id = p.hobt_id
 INNER JOIN sys.objects AS o WITH (NOLOCK)
 ON p.object_id = o.object_id
+INNER JOIN sys.database_files AS f WITH (NOLOCK)
+ON b.file_id = f.file_id
+INNER JOIN sys.filegroups AS fg WITH (NOLOCK)
+ON f.data_space_id = fg.data_space_id
 WHERE b.database_id = CONVERT(int, DB_ID())
 AND p.[object_id] > 100
 AND OBJECT_NAME(p.[object_id]) NOT LIKE N'plan_%'
 AND OBJECT_NAME(p.[object_id]) NOT LIKE N'sys%'
 AND OBJECT_NAME(p.[object_id]) NOT LIKE N'xml_index_nodes%'
-GROUP BY o.Schema_ID, p.[object_id], p.index_id, p.data_compression_desc, p.[Rows]
+GROUP BY fg.name, o.Schema_ID, p.[object_id], p.index_id, 
+         p.data_compression_desc, p.[Rows]
 ORDER BY [BufferCount] DESC OPTION (RECOMPILE);
 ------
 
